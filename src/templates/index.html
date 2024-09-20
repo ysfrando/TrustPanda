@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustPanda</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i>
+                <h1>TrustPanda</h1>
+            </div>
+            <form id="ip-form">
+                <div class="input-group">
+                    <input type="text" id="ip-input" placeholder="Enter IP address" required>
+                    <button type="submit">Check</button>
+                </div>
+            </form>
+            <div id="result" class="result-card" style="display: none;">
+                <h2 class="result-title">Results</h2>
+                <div id="result-content"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.getElementById('ip-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const ip = document.getElementById('ip-input').value;
+            const resultCard = document.getElementById('result');
+            const resultContent = document.getElementById('result-content');
+            
+            resultCard.style.display = 'block';
+            resultContent.innerHTML = '<div class="loader"></div>';
+            
+            try {
+                const response = await fetch('/check_ip', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `ip=${encodeURIComponent(ip)}`,
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const result = await response.json();
+                displayResults(result);
+            } catch (error) {
+                console.error('Error:', error);
+                resultContent.innerHTML = `<p class="error-message">Error: ${error.message}</p>`;
+            }
+        });
+
+        function displayResults(data) {
+            const resultContent = document.getElementById('result-content');
+            resultContent.innerHTML = '';
+
+            const fields = [
+                { key: 'ipAddress', label: 'IP Address', icon: 'fa-globe' },
+                { key: 'abuseConfidenceScore', label: 'Abuse Confidence Score', icon: 'fa-chart-bar' },
+                { key: 'countryCode', label: 'Country Code', icon: 'fa-flag' },
+                { key: 'domain', label: 'Domain', icon: 'fa-link' },
+                { key: 'isp', label: 'ISP', icon: 'fa-network-wired' },
+                { key: 'usageType', label: 'Usage Type', icon: 'fa-info-circle' },
+                { key: 'isTor', label: 'Is Tor', icon: 'fa-mask' },
+                { key: 'totalReports', label: 'Total Reports', icon: 'fa-exclamation-triangle' },
+            ];
+
+            fields.forEach(field => {
+                if (data.data.hasOwnProperty(field.key)) {
+                    const value = data.data[field.key];
+                    resultContent.innerHTML += `
+                        <div class="result-item">
+                            <span class="result-label"><i class="fas ${field.icon}"></i> ${field.label}:</span>
+                            <span class="result-value">${value}</span>
+                        </div>
+                    `;
+                }
+            });
+
+            if (data.data.hostnames && data.data.hostnames.length > 0) {
+                resultContent.innerHTML += `
+                    <div class="result-item">
+                        <span class="result-label"><i class="fas fa-server"></i> Hostnames:</span>
+                        <ul class="hostnames-list">
+                            ${data.data.hostnames.map(hostname => `<li>${hostname}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
